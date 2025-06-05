@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>第五關：生命線選擇 - 小丑魚的冒險</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #81d4fa 0%, #4db6ac 100%);
+      display: flex; flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      color: #004d40;
+    }
+    #gameWrapper {
+      background: #e0f7fa;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      padding: 20px;
+      margin-top: 20px;
+      flex-grow: 1;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #00796b;
+    }
+    #energyBar {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #004d40;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 16px;
+      user-select: none;
+      z-index: 10;
+    }
+    #storyText {
+      font-size: 18px;
+      line-height: 1.5;
+      min-height: 140px;
+      margin-bottom: 20px;
+      white-space: pre-line;
+    }
+    #choices {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    button.choiceBtn {
+      background-color: #00796b;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 16px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button.choiceBtn:hover {
+      background-color: #004d40;
+    }
+    #resultText {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #00796b;
+      min-height: 30px;
+    }
+    #nextBtn, #restartBtn {
+      margin-top: 25px;
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      align-self: center;
+    }
+    #nextBtn:hover, #restartBtn:hover {
+      background-color: #004d40;
+    }
+    #clownfishImg {
+      display: block;
+      margin: 0 auto 20px auto;
+      max-width: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div id="energyBar">能量值: 100</div>
+
+  <div id="gameWrapper">
+    <h1>第五關：生命線選擇<br>拯救小丑魚</h1>
+    <img id="clownfishImg" src="images/clownfish.png" alt="小丑魚" />
+    <div id="storyText"></div>
+    <div id="choices"></div>
+    <div id="resultText"></div>
+    <button id="nextBtn" onclick="location.href='level6.html'">前往下一關</button>
+    <button id="restartBtn" onclick="restartGame()">重新開始</button>
+  </div>
+
+  <script>
+    const energyBar = document.getElementById('energyBar');
+    const storyText = document.getElementById('storyText');
+    const choicesDiv = document.getElementById('choices');
+    const resultText = document.getElementById('resultText');
+    const nextBtn = document.getElementById('nextBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let energy = 100;
+
+    const scenes = {
+      start: {
+        text: "小丑魚在珊瑚礁附近游泳，但發現珊瑚白化嚴重，棲息地受到威脅。你要怎麼幫助牠？",
+        choices: [
+          { text: "幫助清理海洋垃圾", energyChange: +10, next: "coralCleanup" },
+          { text: "尋找新的棲息地", energyChange: 0, next: "findNewHome" },
+          { text: "不理會，繼續游泳", energyChange: -20, next: "ignoreProblem" },
+        ]
+      },
+      coralCleanup: {
+        text: "你帶著小丑魚和海洋志工一起清理垃圾，珊瑚漸漸恢復健康，小丑魚感覺活力充沛。",
+        choices: [
+          { text: "繼續守護珊瑚礁", energyChange: +10, next: "educateCommunity" },
+          { text: "暫時休息，觀察環境", energyChange: 0, next: "monitorChanges" },
+          { text: "去探索附近海域", energyChange: -5, next: "exploreNearby" },
+        ]
+      },
+      findNewHome: {
+        text: "小丑魚嘗試尋找新的棲息地，但新的地方也有捕撈和污染問題，能量逐漸減少。",
+        choices: [
+          { text: "回去守護原本珊瑚礁", energyChange: +5, next: "coralCleanup" },
+          { text: "冒險繼續尋找", energyChange: -15, next: "finalBad" },
+          { text: "與其他魚類合作", energyChange: +5, next: "cooperateFish" },
+        ]
+      },
+      ignoreProblem: {
+        text: "不理會問題，小丑魚的棲息地逐漸惡化，牠感到越來越虛弱。",
+        choices: [
+          { text: "現在後悔，開始行動", energyChange: +5, next: "coralCleanup" },
+          { text: "放棄，游向更遠的海域", energyChange: -20, next: "finalBad" },
+          { text: "尋求海洋守護者幫助", energyChange: +10, next: "guardianHelp" },
+        ]
+      },
+      educateCommunity: {
+        text: "你開始向社區宣導保護海洋的重要，小丑魚的生活環境逐漸改善。",
+        choices: [
+          { text: "組織海洋保護活動", energyChange: +10, next: "finalGood" },
+          { text: "只做一般宣導", energyChange: 0, next: "finalGood" },
+          { text: "尋求政府支持", energyChange: +15, next: "finalGood" },
+        ]
+      },
+      monitorChanges: {
+        text: "你密切觀察珊瑚礁變化，準備隨時採取行動。",
+        choices: [
+          { text: "主動修復珊瑚", energyChange: +10, next: "finalGood" },
+          { text: "等待自然恢復", energyChange: -10, next: "finalBad" },
+          { text: "請專家評估", energyChange: +5, next: "finalGood" },
+        ]
+      },
+      exploreNearby: {
+        text: "在附近海域，小丑魚遇見許多海洋生物，但也發現更多污染問題。",
+        choices: [
+          { text: "幫助受困水母", energyChange: +10, next: "finalGood" },
+          { text: "忽略，繼續探索", energyChange: -10, next: "finalBad" },
+          { text: "記錄環境狀況", energyChange: +5, next: "monitorChanges" },
+        ]
+      },
+      cooperateFish: {
+        text: "與其他魚類合作，共同對抗污染威脅，小丑魚逐漸恢復活力。",
+        choices: [
+          { text: "加強合作", energyChange: +10, next: "finalGood" },
+          { text: "放慢腳步", energyChange: 0, next: "finalGood" },
+          { text: "尋找盟友", energyChange: +5, next: "finalGood" },
+        ]
+      },
+      guardianHelp: {
+        text: "海洋守護者聽到呼喚，開始幫助改善棲息環境。",
+        choices: [
+          { text: "協助守護者工作", energyChange: +10, next: "finalGood" },
+          { text: "保持距離觀察", energyChange: -5, next: "finalBad" },
+          { text: "尋求更多幫助", energyChange: +5, next: "finalGood" },
+        ]
+      },
+      finalGood: {
+        text: "小丑魚在你的幫助下恢復活力，珊瑚礁生態逐漸復原，牠得以繼續快樂生活！",
+        choices: [],
+        ending: "win"
+      },
+      finalBad: {
+        text: "小丑魚因為環境惡化，能量耗盡，最終失去了棲息地...希望未來能有更多人保護海洋。",
+        choices: [],
+        ending: "lose"
+      }
+    };
+
+    function updateEnergy(change) {
+      energy += change;
+      if (energy > 100) energy = 100;
+      if (energy < 0) energy = 0;
+      energyBar.textContent = `能量值: ${energy}`;
+    }
+
+    function clearChoices() {
+      choicesDiv.innerHTML = '';
+      resultText.textContent = '';
+      nextBtn.style.display = 'none';
+      restartBtn.style.display = 'none';
+    }
+
+    function showScene(sceneKey) {
+      clearChoices();
+      const scene = scenes[sceneKey];
+      storyText.textContent = scene.text;
+
+      if (scene.ending) {
+        if (scene.ending === "win") {
+          resultText.textContent = "🎉 恭喜你拯救了小丑魚！";
+        } else {
+          resultText.textContent = "💔 小丑魚失去了棲息地...";
+        }
+        restartBtn.style.display = 'block';
+        return;
+      }
+
+      scene.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'choiceBtn';
+        btn.textContent = choice.text;
+        btn.addEventListener('click', () => {
+          updateEnergy(choice.energyChange);
+          if (energy <= 0) {
+            showScene("finalBad");
+            return;
+          }
+          showScene(choice.next);
+        });
+        choicesDiv.appendChild(btn);
+      });
+    }
+
+    function restartGame() {
+      energy = 100;
+      energyBar.textContent = `能量值: ${energy}`;
+      nextBtn.style.display = 'none';
+      restartBtn.style.display = 'none';
+      resultText.textContent = '';
+      showScene('start');
+    }
+
+    showScene('start');
+  </script>
+</body>
+</html>
+
+

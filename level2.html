@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>解救受困動物（生命值制）</title>
+  <style>
+    body, html {
+      margin:0; padding:0; overflow:hidden; background:#0099cc;
+      font-family: "Microsoft JhengHei", sans-serif;
+      user-select:none;
+    }
+    #gameArea {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: url('images/background.jpg') no-repeat center/cover;
+    }
+    .animal, .garbage {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      user-select:none;
+      pointer-events:none;
+    }
+    .animal {
+      pointer-events:auto;
+      z-index: 10;
+    }
+    .garbage {
+      z-index: 5;
+    }
+    #safeZone {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 120px;
+      height: 120px;
+      border: 3px solid #0f0;
+      border-radius: 10px;
+      background: rgba(0,255,0,0.2);
+      font-size: 16px;
+      color: #060;
+      text-align: center;
+      line-height: 120px;
+      font-weight: bold;
+      user-select:none;
+      z-index: 2;
+    }
+    #scoreBoard {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      color: white;
+      font-size: 18px;
+      text-align: right;
+      user-select:none;
+      z-index: 20;
+    }
+    #healthBarContainer {
+      margin-top: 4px;
+      width: 150px;
+      height: 20px;
+      border: 2px solid white;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.2);
+      overflow: hidden;
+    }
+    #healthBar {
+      height: 100%;
+      background: #f00;
+      width: 100%;
+      border-radius: 8px;
+      transition: width 0.3s ease;
+    }
+    #endScreen, #startScreen {
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      z-index: 1000;
+    }
+    #endScreen { display: none; }
+    #endScreen button, #startScreen button {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 18px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      background-color: #0f0;
+      color: #000;
+      font-weight: bold;
+    }
+    #nextLevelBtn {
+      background-color: #00f;
+      color: #fff;
+    }
+    #startScreen p {
+      font-size: 18px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameArea">
+    <div id="safeZone">安全區</div>
+  </div>
+
+  <div id="scoreBoard">
+    救出動物: <span id="rescuedCount">0</span><br />
+    生命值: <span id="healthValue">100</span>
+    <div id="healthBarContainer">
+      <div id="healthBar"></div>
+    </div>
+    時間: <span id="timer">60</span>s
+  </div>
+
+  <div id="startScreen">
+    <h1>解救受困動物</h1>
+    <p>操作動物用方向鍵（或 WASD）移動<br>
+       避開海洋垃圾撞擊造成傷害<br>
+       將動物帶到右下角的安全區救出<br>
+       生命值歸零或時間結束遊戲結束<br>
+       盡量救出更多動物吧！</p>
+    <button id="startBtn">開始遊戲</button>
+  </div>
+
+  <div id="endScreen">
+    <div id="finalScore"></div>
+    <div>保護海洋，從你我做起！</div>
+    <button id="restartBtn">重新開始</button>
+    <button id="nextLevelBtn" style="display:none;">前往下一關</button>
+  </div>
+
+  <script>
+    (() => {
+      const gameArea = document.getElementById('gameArea');
+      const safeZone = document.getElementById('safeZone');
+      const rescuedCountEl = document.getElementById('rescuedCount');
+      const healthValueEl = document.getElementById('healthValue');
+      const healthBar = document.getElementById('healthBar');
+      const timerEl = document.getElementById('timer');
+      const endScreen = document.getElementById('endScreen');
+      const finalScoreEl = document.getElementById('finalScore');
+      const restartBtn = document.getElementById('restartBtn');
+      const startScreen = document.getElementById('startScreen');
+      const startBtn = document.getElementById('startBtn');
+      const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+      const ANIMAL_IMAGES = ['images/turtle.png', 'images/hipig.png', 'images/fish.png'];
+      const GARBAGE_IMAGES = ['images/a.png', 'images/b.png', 'images/c.png', 'images/d.png', 'images/e.png', 'images/f.png'];
+      const TOTAL_GARBAGE = 40;
+      const GAME_TIME = 60;
+      const MAX_HEALTH = 100;
+      const DAMAGE = 10;
+
+      let health, rescuedCount, timer, timerInterval;
+      let currentAnimal = null;
+      let garbageItems = [];
+
+      function randomRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      function createAnimal() {
+        if (currentAnimal && gameArea.contains(currentAnimal)) {
+          gameArea.removeChild(currentAnimal);
+        }
+        const img = document.createElement('img');
+        img.src = ANIMAL_IMAGES[Math.floor(Math.random() * ANIMAL_IMAGES.length)];
+        img.classList.add('animal');
+        img.style.top = '100px';
+        img.style.left = '50px';
+        gameArea.appendChild(img);
+        currentAnimal = img;
+      }
+
+      function createGarbage() {
+        garbageItems.forEach(g => {
+          if (gameArea.contains(g)) gameArea.removeChild(g);
+        });
+        garbageItems = [];
+
+        for (let i = 0; i < TOTAL_GARBAGE; i++) {
+          const img = document.createElement('img');
+          img.src = GARBAGE_IMAGES[Math.floor(Math.random() * GARBAGE_IMAGES.length)];
+          img.classList.add('garbage');
+          img.style.top = randomRange(50, window.innerHeight - 100) + 'px';
+          img.style.left = randomRange(0, window.innerWidth - 50) + 'px';
+          img.style.transform = `rotate(${Math.floor(Math.random() * 360)}deg)`;
+          gameArea.appendChild(img);
+          garbageItems.push(img);
+        }
+      }
+
+      function updateHealth(value) {
+        health = Math.max(0, Math.min(MAX_HEALTH, health + value));
+        healthValueEl.textContent = health;
+        healthBar.style.width = (health / MAX_HEALTH * 100) + '%';
+        if (health <= 0) endGame();
+      }
+
+      function updateRescuedCount(value) {
+        rescuedCount += value;
+        rescuedCountEl.textContent = rescuedCount;
+      }
+
+      function moveAnimal(dx, dy) {
+        if (!currentAnimal) return;
+        let left = parseFloat(currentAnimal.style.left);
+        let top = parseFloat(currentAnimal.style.top);
+        left += dx;
+        top += dy;
+        left = Math.min(Math.max(left, 0), window.innerWidth - currentAnimal.offsetWidth);
+        top = Math.min(Math.max(top, 50), window.innerHeight - currentAnimal.offsetHeight);
+        currentAnimal.style.left = left + 'px';
+        currentAnimal.style.top = top + 'px';
+
+        for (let i = garbageItems.length - 1; i >= 0; i--) {
+          const g = garbageItems[i];
+          if (checkCollision(currentAnimal, g)) {
+            updateHealth(-DAMAGE);
+            if (gameArea.contains(g)) gameArea.removeChild(g);
+            garbageItems.splice(i, 1);
+          }
+        }
+
+        if (checkCollision(currentAnimal, safeZone)) {
+          updateRescuedCount(1);
+          updateHealth(MAX_HEALTH); // 恢復滿生命
+          createAnimal();
+          createGarbage();
+        }
+      }
+
+      function checkCollision(el1, el2) {
+        const r1 = el1.getBoundingClientRect();
+        const r2 = el2.getBoundingClientRect();
+        return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
+      }
+
+      function startTimer() {
+        timer = GAME_TIME;
+        timerEl.textContent = timer;
+        timerInterval = setInterval(() => {
+          timer--;
+          timerEl.textContent = timer;
+          if (timer <= 0) endGame();
+        }, 1000);
+      }
+
+      function endGame() {
+        clearInterval(timerInterval);
+        if (currentAnimal && gameArea.contains(currentAnimal)) {
+          gameArea.removeChild(currentAnimal);
+        }
+        garbageItems.forEach(g => {
+          if (gameArea.contains(g)) gameArea.removeChild(g);
+        });
+        garbageItems = [];
+
+        let message;
+        const finalScore = rescuedCount * 10 + health;
+
+        if (rescuedCount >= 2) {
+          message = `過關成功！\n你救出了 ${rescuedCount} 隻動物\n最終得分：${finalScore}`;
+          nextLevelBtn.style.display = 'inline-block'; // 顯示下一關按鈕
+        } else {
+          message = `挑戰失敗！你只救出了 ${rescuedCount} 隻動物\n至少要救出 2 隻才算過關\n請重新挑戰`;
+          nextLevelBtn.style.display = 'none'; // 隱藏下一關按鈕
+        }
+
+        finalScoreEl.textContent = message;
+        endScreen.style.display = 'flex';
+      }
+
+      function startGame() {
+        health = MAX_HEALTH;
+        rescuedCount = 0;
+        timer = GAME_TIME;
+        healthValueEl.textContent = health;
+        rescuedCountEl.textContent = rescuedCount;
+        healthBar.style.width = '100%';
+        timerEl.textContent = timer;
+        endScreen.style.display = 'none';
+        startScreen.style.display = 'none';
+        nextLevelBtn.style.display = 'none';
+        createAnimal();
+        createGarbage();
+        startTimer();
+      }
+
+      window.addEventListener('keydown', e => {
+        if (startScreen.style.display !== 'none' || endScreen.style.display === 'flex') return;
+        const key = e.key.toLowerCase();
+        const speed = 15;
+        switch (key) {
+          case 'arrowup': case 'w': moveAnimal(0, -speed); break;
+          case 'arrowdown': case 's': moveAnimal(0, speed); break;
+          case 'arrowleft': case 'a': moveAnimal(-speed, 0); break;
+          case 'arrowright': case 'd': moveAnimal(speed, 0); break;
+        }
+      });
+
+      startBtn.addEventListener('click', startGame);
+      restartBtn.addEventListener('click', startGame);
+      nextLevelBtn.addEventListener('click', () => {
+        // 這裡改成你下一關的檔案路徑或網址
+        window.location.href = 'level3.html';
+      });
+    })();
+  </script>
+</body>
+</html>
+
+
+
+
+
