@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>關卡三：海岸保衛戰</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #87ceeb;
+      overflow: hidden;
+    }
+    #gameArea {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background-image: linear-gradient(to bottom, #a3d9a5 0%, #87ceeb 40%, #0077be 100%);
+    }
+    .trash {
+      width: 60px;
+      height: 60px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transition: top 0.2s;
+    }
+    .interceptor {
+      width: 60px;
+      height: 60px;
+      position: absolute;
+      border: 2px solid #555;
+      border-radius: 10px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      cursor: pointer;
+    }
+    #scoreBoard, #timer {
+      position: absolute;
+      top: 10px;
+      font-size: 20px;
+      color: #fff;
+      z-index: 10;
+    }
+    #scoreBoard { left: 10px; }
+    #timer { right: 10px; }
+    #endScreen, #startScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      z-index: 100;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    #endScreen { display: none; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: none;
+      background-color: #0f0;
+      color: #000;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover { background-color: #0c0; }
+  </style>
+</head>
+<body>
+
+<!-- 背景音樂 -->
+<audio id="bgm" src="audio/bgm.mp3" loop></audio>
+
+<div id="gameArea">
+  <div id="scoreBoard">分數：0</div>
+  <div id="timer">剩餘時間：60</div>
+
+  <div id="startScreen">
+    <h1>關卡三：海岸保衛戰</h1>
+    <p>
+      遊戲說明：<br>
+      海岸線上不斷有垃圾飄入海洋，<br>
+      你可以在畫面點擊放置「濾網」攔截垃圾。<br>
+      濾網最多可放置 10 個，點擊濾網可重新使用。<br>
+      攔截垃圾會獲得10分，讓垃圾掉到海裡會扣5分。<br>
+      限時 60 秒，取得至少 200 分才算過關！
+    </p>
+    <button id="startBtn">開始遊戲</button>
+  </div>
+
+  <div id="endScreen">
+    <div id="finalScore"></div>
+    <p>小知識：80% 的海洋垃圾來自陸地，我們每個人都可以從源頭防止垃圾入海！</p>
+    <button id="nextBtn" onclick="handleEnd()">下一關</button>
+  </div>
+</div>
+
+<script>
+  const bgm = document.getElementById('bgm');
+  const gameArea = document.getElementById('gameArea');
+  const scoreBoard = document.getElementById('scoreBoard');
+  const timer = document.getElementById('timer');
+  const endScreen = document.getElementById('endScreen');
+  const finalScore = document.getElementById('finalScore');
+  const startScreen = document.getElementById('startScreen');
+  const startBtn = document.getElementById('startBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let score = 0;
+  let timeLeft = 60;
+  let trashInterval;
+  let gameTimer;
+  const interceptorLimit = 10;
+
+  function random(min, max) {
+    return Math.floor(Math.random() * (max - min) + min);
+  }
+
+  function createTrash() {
+    const trash = document.createElement('div');
+    trash.className = 'trash';
+    trash.style.left = random(0, window.innerWidth - 60) + 'px';
+    trash.style.backgroundImage = "url('images/b.png')";
+    gameArea.appendChild(trash);
+
+    let topPos = 0;
+    const fallSpeed = random(6, 10);
+
+    const move = setInterval(() => {
+      topPos += fallSpeed;
+      trash.style.top = topPos + 'px';
+
+      const interceptors = document.querySelectorAll('.interceptor');
+      interceptors.forEach(interceptor => {
+        const ix = interceptor.offsetLeft;
+        const iy = interceptor.offsetTop;
+        const tx = trash.offsetLeft;
+        const ty = trash.offsetTop;
+        if (Math.abs(ix - tx) < 50 && Math.abs(iy - ty) < 50) {
+          clearInterval(move);
+          trash.remove();
+          score += 10;
+          scoreBoard.innerText = `分數：${score}`;
+        }
+      });
+
+      if (topPos > window.innerHeight - 100) {
+        clearInterval(move);
+        trash.remove();
+        score -= 5;
+        scoreBoard.innerText = `分數：${score}`;
+      }
+    }, 50);
+  }
+
+  function createInterceptor(x, y) {
+    if (document.querySelectorAll('.interceptor').length >= interceptorLimit) return;
+    const node = document.createElement('div');
+    node.className = 'interceptor';
+    node.style.left = x - 30 + 'px';
+    node.style.top = y - 30 + 'px';
+    node.style.backgroundImage = "url('images/o.png')";
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      node.remove();
+    });
+    gameArea.appendChild(node);
+  }
+
+  gameArea.addEventListener('click', (e) => {
+    if (e.target.id === 'gameArea') {
+      createInterceptor(e.clientX, e.clientY);
+    }
+  });
+
+  function startGame() {
+    startScreen.style.display = 'none';
+    endScreen.style.display = 'none';
+    score = 0;
+    timeLeft = 60;
+    scoreBoard.innerText = `分數：${score}`;
+    timer.innerText = `剩餘時間：${timeLeft}`;
+    trashInterval = setInterval(createTrash, 800);
+    gameTimer = setInterval(() => {
+      timeLeft--;
+      timer.innerText = `剩餘時間：${timeLeft}`;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+    bgm.play(); // 播放背景音樂
+  }
+
+  function endGame() {
+    clearInterval(trashInterval);
+    clearInterval(gameTimer);
+    document.querySelectorAll('.trash').forEach(t => t.remove());
+    document.querySelectorAll('.interceptor').forEach(i => i.remove());
+    bgm.pause();        // 暫停音樂
+    bgm.currentTime = 0; // 重設音樂到開頭
+    endScreen.style.display = 'flex';
+    finalScore.innerText = `你的最終分數為：${score}`;
+  }
+
+  function handleEnd() {
+    if (score >= 200) {
+      window.location.href = 'level4.html';
+    } else {
+      alert('分數未達 200 分，請再試一次！');
+      window.location.reload();
+    }
+  }
+
+  startBtn.addEventListener('click', startGame);
+</script>
+</body>
+</html>

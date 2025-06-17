@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>關卡一：海上垃圾風暴</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Arial", sans-serif;
+      overflow: hidden;
+    }
+    #gameArea {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: url('images/background.jpg') no-repeat center center;
+      background-size: cover;
+    }
+    #scoreBoard, #timer {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 18px;
+      z-index: 10;
+    }
+    #scoreBoard { top: 10px; left: 10px; }
+    #timer { top: 10px; right: 10px; }
+
+    .trash {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      font-size: 40px;
+      user-select: none;
+      cursor: grab;
+      transform-origin: center center;
+    }
+
+    .bin {
+      position: absolute;
+      bottom: 20px;
+      width: 100px;
+      height: 100px;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      text-align: center;
+      line-height: 100px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    #trashBin { left: 20px; background-color: #9e9e9e; }
+    #recycleBin { right: 20px; background-color: #4caf50; }
+
+    #endScreen, #startScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.75);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      text-align: center;
+      z-index: 1000;
+    }
+
+    #endScreen { display: none; }
+    #startScreen p {
+      font-size: 20px;
+      margin: 20px;
+      max-width: 600px;
+    }
+
+    #startScreen button, #endScreen button {
+      padding: 12px 24px;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      background-color: #ffffff;
+      color: #000000;
+      border: none;
+      margin-top: 20px;
+    }
+
+    #endMessage {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 背景音樂 -->
+<audio id="bgm" src="audio/bgm.mp3" loop></audio>
+
+<div id="gameArea">
+  <div id="scoreBoard">分數: 0</div>
+  <div id="timer">時間: 60</div>
+
+  <div id="trashBin" class="bin">垃圾桶</div>
+  <div id="recycleBin" class="bin">回收桶</div>
+
+  <div id="startScreen">
+    <h1>🌊 關卡一：海上垃圾風暴</h1>
+    <p>拖曳垃圾至正確的分類桶！<br>分類錯誤會扣分，時間結束前達到100分才可進入下一關！</p>
+    <button onclick="startGame()">開始遊戲</button>
+  </div>
+
+  <div id="endScreen">
+    <div id="endMessage"></div>
+    <div id="finalScore"></div>
+    <p>🌊 小知識：每年有超過 800 萬噸塑膠流入海洋，威脅海洋生物與生態系統。</p>
+    <button id="nextLevelBtn" onclick="goToNextLevel()" style="display: none;">進入下一關</button>
+    <button id="restartBtn" onclick="restartGame()" style="display: none;">重新開始</button>
+  </div>
+</div>
+
+<script>
+  const trashData = [
+    { icon: "🥢", type: "trash" },
+    { icon: "🧴", type: "recycle" },
+    { icon: "🍱", type: "trash" },
+    { icon: "🛍️", type: "trash" },
+    { icon: "🥤", type: "recycle" },
+    { icon: "💿", type: "recycle" }
+  ];
+
+  let score = 0;
+  let timeLeft = 60;
+  const totalTrash = 50;
+
+  const gameArea = document.getElementById("gameArea");
+  const scoreBoard = document.getElementById("scoreBoard");
+  const timerDisplay = document.getElementById("timer");
+  const endScreen = document.getElementById("endScreen");
+  const endMessage = document.getElementById("endMessage");
+  const finalScore = document.getElementById("finalScore");
+  const startScreen = document.getElementById("startScreen");
+  const nextLevelBtn = document.getElementById("nextLevelBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const bgm = document.getElementById("bgm");
+
+  function updateScore(value) {
+    score += value;
+    scoreBoard.textContent = "分數: " + score;
+  }
+
+  function startTimer() {
+    const timer = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = "時間: " + timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        document.querySelectorAll('.trash').forEach(el => el.remove());
+        showEndScreen();
+      }
+    }, 1000);
+  }
+
+  function showEndScreen() {
+    endScreen.style.display = 'flex';
+    finalScore.textContent = "你的最終得分為：" + score + " 分";
+
+    if (score >= 100) {
+      endMessage.textContent = "🎉 恭喜你成功過關！";
+      nextLevelBtn.style.display = "inline-block";
+      restartBtn.style.display = "none";
+    } else {
+      endMessage.textContent = "😢 分數未達100，請再接再厲！";
+      nextLevelBtn.style.display = "none";
+      restartBtn.style.display = "inline-block";
+    }
+  }
+
+  function spawnTrash() {
+    const areaWidth = window.innerWidth;
+    const areaHeight = window.innerHeight - 120;
+
+    for (let i = 0; i < totalTrash; i++) {
+      const data = trashData[Math.floor(Math.random() * trashData.length)];
+      const trash = document.createElement("div");
+      trash.classList.add("trash");
+      trash.textContent = data.icon;
+      trash.dataset.type = data.type;
+
+      const x = Math.random() * (areaWidth - 60);
+      const y = Math.random() * (areaHeight - 60);
+      const rot = Math.random() * 360;
+
+      trash.style.left = `${x}px`;
+      trash.style.top = `${y}px`;
+      trash.style.transform = `rotate(${rot}deg)`;
+
+      makeDraggable(trash);
+      gameArea.appendChild(trash);
+    }
+  }
+
+  function makeDraggable(el) {
+    let offsetX, offsetY;
+
+    el.addEventListener("mousedown", function (e) {
+      offsetX = e.clientX - el.offsetLeft;
+      offsetY = e.clientY - el.offsetTop;
+
+      function moveAt(e) {
+        el.style.left = `${e.clientX - offsetX}px`;
+        el.style.top = `${e.clientY - offsetY}px`;
+      }
+
+      function onDrop(e) {
+        document.removeEventListener("mousemove", moveAt);
+        document.removeEventListener("mouseup", onDrop);
+
+        const rectTrash = el.getBoundingClientRect();
+        const trashBin = document.getElementById("trashBin").getBoundingClientRect();
+        const recycleBin = document.getElementById("recycleBin").getBoundingClientRect();
+
+        if (isIntersecting(rectTrash, trashBin)) {
+          checkAnswer(el, "trash");
+        } else if (isIntersecting(rectTrash, recycleBin)) {
+          checkAnswer(el, "recycle");
+        }
+      }
+
+      document.addEventListener("mousemove", moveAt);
+      document.addEventListener("mouseup", onDrop);
+    });
+  }
+
+  function isIntersecting(a, b) {
+    return !(b.left > a.right || 
+             b.right < a.left || 
+             b.top > a.bottom ||
+             b.bottom < a.top);
+  }
+
+  function checkAnswer(el, binType) {
+    if (el.dataset.type === binType) {
+      updateScore(10);
+    } else {
+      updateScore(-5);
+    }
+    el.remove();
+  }
+
+  function startGame() {
+    score = 0;
+    timeLeft = 60;
+    scoreBoard.textContent = "分數: 0";
+    timerDisplay.textContent = "時間: 60";
+    startScreen.style.display = 'none';
+    endScreen.style.display = 'none';
+    nextLevelBtn.style.display = 'none';
+    restartBtn.style.display = 'none';
+    spawnTrash();
+    startTimer();
+    bgm.play(); // 🔊 播放背景音樂
+  }
+
+  function restartGame() {
+    startGame();
+  }
+
+  function goToNextLevel() {
+    window.location.href = "level2.html";
+  }
+</script>
+
+</body>
+</html>

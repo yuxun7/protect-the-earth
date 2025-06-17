@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>第四關：生態連連看</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #e0f7fa;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #intro {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 77, 64, 0.95);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #intro h1 { font-size: 36px; margin-bottom: 20px; }
+    #intro p { font-size: 20px; max-width: 600px; margin-bottom: 30px; }
+
+    #startBtn {
+      padding: 12px 24px;
+      font-size: 20px;
+      background-color: #26a69a;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+    }
+
+    #wrapper {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 95%;
+      height: 95%;
+    }
+
+    #result {
+      background: #004d40;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 18px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    #gameContainer {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      border: 2px solid #00796b;
+      border-radius: 12px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      align-items: center;
+      padding: 10px;
+    }
+
+    .card {
+      width: 120px;
+      height: 140px;
+      border: 2px solid #00796b;
+      border-radius: 8px;
+      background: #b2dfdb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.3s;
+      padding: 5px;
+    }
+
+    .card img {
+      max-width: 80px;
+      max-height: 80px;
+    }
+
+    .label {
+      font-size: 14px;
+      color: #004d40;
+      text-align: center;
+      padding-bottom: 5px;
+    }
+
+    .card.selected {
+      background: #4db6ac;
+    }
+
+    #nextBtn {
+      margin-top: 12px;
+      padding: 10px 20px;
+      font-size: 18px;
+      display: none;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 背景音樂播放器 -->
+<audio id="bgm" src="audio/bgm.mp3" loop></audio>
+
+<div id="intro">
+  <h1>第四關：生態連連看</h1>
+  <p>請幫助我們將海洋生物與牠們所面臨的威脅或棲息地正確配對，<br>讓我們更加了解海洋生態系面臨的挑戰！</p>
+  <button id="startBtn">開始遊戲</button>
+</div>
+
+<div id="wrapper">
+  <div id="result">請配對海洋生物與其威脅或棲息地</div>
+  <div id="gameContainer">
+    <div id="leftColumn" class="column"></div>
+    <div id="rightColumn" class="column"></div>
+  </div>
+  <button id="nextBtn" onclick="location.href='level5.html'">前往下一關</button>
+</div>
+
+<script>
+  const bgm = document.getElementById('bgm');
+
+  document.getElementById('startBtn').onclick = function () {
+    document.getElementById('intro').style.display = 'none';
+    document.getElementById('wrapper').style.display = 'flex';
+    bgm.play(); // 播放背景音樂
+  };
+
+  const pairs = [
+    { id: '1', left: { img: 'images/turtle.png', label: '海龜' }, right: { img: 'images/b.png', label: '誤食塑膠袋' }},
+    { id: '2', left: { img: 'images/hipig.png', label: '海豚' }, right: { img: 'images/q.png', label: '聲波干擾' }},
+    { id: '3', left: { img: 'images/shark.png', label: '鯊魚' }, right: { img: 'images/s.png', label: '魚翅貿易' }},
+    { id: '4', left: { img: 'images/clownfish.png', label: '小丑魚' }, right: { img: 'images/sb.png', label: '珊瑚白化' }},
+    { id: '5', left: { img: 'images/h.png', label: '魟魚' }, right: { img: 'images/ji.png', label: '作為中藥材' }},
+    { id: '6', left: { img: 'images/p.png', label: '螃蟹' }, right: { img: 'images/oul.png', label: '海岸線汙染' }},
+    { id: '7', left: { img: 'images/water.png', label: '水母' }, right: { img: 'images/di.png', label: '氣候變遷水溫上升' }},
+    { id: '8', left: { img: 'images/j.png', label: '鯨魚' }, right: { img: 'images/bu.png', label: '魚網纏繞' }},
+    { id: '9', left: { img: 'images/bear.png', label: '北極熊' }, right: { img: 'images/ice.png', label: '冰層融化' }},
+    { id: '10', left: { img: 'images/penguin.png', label: '企鵝' }, right: { img: 'images/oil_spill.png', label: '石油汙染' }}
+  ];
+
+  const leftColumn = document.getElementById('leftColumn');
+  const rightColumn = document.getElementById('rightColumn');
+  const resultDiv = document.getElementById('result');
+  let selectedLeft = null;
+  let selectedRight = null;
+  let matched = 0;
+
+  function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+  }
+
+  function createCard(data, side) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = data.id;
+
+    const img = document.createElement('img');
+    img.src = side === 'left' ? data.left.img : data.right.img;
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = side === 'left' ? data.left.label : data.right.label;
+
+    card.appendChild(img);
+    card.appendChild(label);
+    card.addEventListener('click', () => onCardClick(card, side));
+    return card;
+  }
+
+  function showMessage(msg) {
+    resultDiv.textContent = msg;
+    setTimeout(() => {
+      resultDiv.textContent = '請配對海洋生物與其威脅或棲息地';
+    }, 2000);
+  }
+
+  function onCardClick(card, side) {
+    if (card.classList.contains('matched')) return;
+
+    if (side === 'left') {
+      if (selectedLeft) selectedLeft.classList.remove('selected');
+      selectedLeft = card;
+      selectedLeft.classList.add('selected');
+    } else {
+      if (selectedRight) selectedRight.classList.remove('selected');
+      selectedRight = card;
+      selectedRight.classList.add('selected');
+    }
+
+    if (selectedLeft && selectedRight) {
+      const id1 = selectedLeft.dataset.id;
+      const id2 = selectedRight.dataset.id;
+
+      if (id1 === id2) {
+        const pair = pairs.find(p => p.id === id1);
+        showMessage(`✅ 配對成功：${pair.left.label} ←→ ${pair.right.label}`);
+        selectedLeft.remove();
+        selectedRight.remove();
+        matched++;
+
+        if (matched === pairs.length) {
+          resultDiv.textContent = '🎉 恭喜你完成所有配對！';
+          document.getElementById('nextBtn').style.display = 'block';
+        }
+      } else {
+        showMessage('❌ 配對錯誤，請再試一次');
+      }
+
+      selectedLeft?.classList.remove('selected');
+      selectedRight?.classList.remove('selected');
+      selectedLeft = null;
+      selectedRight = null;
+    }
+  }
+
+  shuffle([...pairs]).forEach(pair => {
+    leftColumn.appendChild(createCard(pair, 'left'));
+  });
+  shuffle([...pairs]).forEach(pair => {
+    rightColumn.appendChild(createCard(pair, 'right'));
+  });
+</script>
+</body>
+</html>
